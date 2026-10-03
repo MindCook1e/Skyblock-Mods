@@ -1,6 +1,8 @@
 # Score300 (ChatTriggers-Modul)
 
-Ein ChatTriggers-Modul (CT 2.1.5, Minecraft 1.8.9) für Hypixel-SkyBlock-Dungeons.
+Ein ChatTriggers-Modul für Hypixel-SkyBlock-Dungeons auf **Minecraft 26.2 (Fabric)**.
+Es läuft mit [ChatTriggers Community Edition](https://github.com/asaprograms/ctjs-community),
+der Fabric-Fortsetzung von ChatTriggers für 26.1.2 / 26.2.
 
 ## Funktionen
 - **300-Score-Nachricht**: Chat-Nachricht, Titel und Sound, sobald der vorhergesagte Score 300 erreicht.
@@ -13,9 +15,16 @@ Ein ChatTriggers-Modul (CT 2.1.5, Minecraft 1.8.9) für Hypixel-SkyBlock-Dungeon
   - Zeitpunkt, an dem 300 erreicht wurde
 
 ## Installation
-1. `ctjs-2.1.5-1.8.9.jar` in den `mods`-Ordner legen.
-2. Den Ordner `Score300` nach `.minecraft/config/ChatTriggers/modules/` kopieren.
-3. Im Spiel `/ct load` ausführen.
+1. Minecraft **26.2** mit **Fabric Loader** installieren (Java 26 oder neuer).
+2. In den `mods`-Ordner legen:
+   - Fabric API
+   - Fabric Language Kotlin
+   - ChatTriggers Community Edition (`ctjs-…jar` für 26.2, aus den Releases von
+     [asaprograms/ctjs-community](https://github.com/asaprograms/ctjs-community))
+3. Den Ordner `Score300` nach `.minecraft/config/ChatTriggers/modules/` kopieren.
+4. Im Spiel `/ct load` ausführen.
+
+> Die `ctjs-2.1.5-1.8.9.jar` im Repo ist für Forge 1.8.9 und funktioniert **nicht** mit 26.2.
 
 ## Befehle
 | Befehl | Funktion |

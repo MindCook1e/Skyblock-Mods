@@ -1,5 +1,6 @@
 /// <reference types="../CTAutocomplete" />
-// Score300 - ChatTriggers Modul (CT 2.x, Minecraft 1.8.9) fuer Hypixel SkyBlock Dungeons
+// Score300 - ChatTriggers Modul fuer Hypixel SkyBlock Dungeons
+// Laeuft mit ChatTriggers Community Edition (Fabric) auf Minecraft 26.2
 //
 // - Nachricht + Titel + Sound sobald der (vorhergesagte) Score 300 erreicht
 // - Overlay: Zeit, Mimic tot (Ja/Nein), Crypts x/5, aktueller Score
@@ -7,7 +8,8 @@
 const MODULE = "Score300";
 const PREFIX = "&8[&6Score300&8]&r ";
 
-const EntityZombie = Java.type("net.minecraft.entity.monster.EntityZombie");
+const EquipmentSlot = Java.type("net.minecraft.world.entity.EquipmentSlot");
+const ARMOR_SLOTS = [EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET];
 
 // ---------------------------------------------------------------------------
 // Einstellungen (werden in data.json gespeichert)
@@ -110,7 +112,8 @@ const readScoreboard = () => {
 const readTab = () => {
     let names = [];
     try {
-        names = TabList.getNames().map(clean);
+        // CT Community: getNames() liefert Name-Objekte, CT 2.x lieferte Strings
+        names = TabList.getNames().map(n => clean(typeof n === "string" ? n : n.getName().getFormattedText()));
     } catch (e) {
         return;
     }
@@ -179,7 +182,7 @@ const announce300 = () => {
     run.scoreTime = run.elapsed;
     ChatLib.chat(`${PREFIX}&a&l300 Score erreicht! &7(${formatTime(run.elapsed)})`);
     Client.showTitle("&6&l300 Score!", "&aAb in den Boss!", 5, 50, 10);
-    World.playSound("random.orb", 1, 1);
+    World.playSound("entity.experience_orb.pickup", 1, 1);
     if (settings.partyChat) ChatLib.command(`pc 300 Score erreicht! (${formatTime(run.elapsed)})`);
 };
 
@@ -202,7 +205,7 @@ register("step", () => {
 // Chat-Events
 // ---------------------------------------------------------------------------
 register("chat", (event) => {
-    const msg = ChatLib.removeFormatting(ChatLib.getChatMessage(event, true));
+    const msg = ChatLib.removeFormatting(ChatLib.getChatMessage(event, false));
 
     if (msg.includes("Here, I found this map when I first entered the dungeon.")) {
         run.startTime = Date.now();
@@ -228,12 +231,13 @@ register("chat", (event) => {
 });
 
 // Mimic = Baby-Zombie ohne Ruestung
+// Der Trigger liefert das rohe Minecraft-LivingEntity (Mojang-Namen, 26.x ist nicht obfuskiert)
 register("entityDeath", (entity) => {
     if (!run.inDungeon || run.mimicDead) return;
-    const mc = entity.getEntity();
-    if (!(mc instanceof EntityZombie) || !mc.func_70631_g_()) return; // isChild()
-    for (let i = 0; i < 4; i++) {
-        if (mc.func_82169_q(i) !== null) return; // getCurrentArmor(i)
+    const mc = entity.toMC ? entity.toMC() : entity;
+    if (String(mc.getClass().getSimpleName()) !== "Zombie" || !mc.isBaby()) return;
+    for (let i = 0; i < ARMOR_SLOTS.length; i++) {
+        if (!mc.getItemBySlot(ARMOR_SLOTS[i]).isEmpty()) return;
     }
     run.mimicDead = true;
     ChatLib.chat(`${PREFIX}&aMimic getoetet!`);
@@ -263,30 +267,32 @@ const overlayLines = () => {
     return lines;
 };
 
-const drawOverlay = (lines) => {
-    const width = Math.max.apply(null, lines.map(l => Renderer.getStringWidth(ChatLib.addColor(l)))) + 6;
+// ctx = GuiGraphics-Kontext, den renderOverlay mitliefert
+const drawOverlay = (ctx, lines) => {
+    const width = Math.max.apply(null, lines.map(l => Renderer.getStringWidth(l))) + 6;
     const height = lines.length * 10 + 4;
 
-    Renderer.retainTransforms(true);
-    Renderer.translate(settings.x, settings.y);
-    Renderer.scale(settings.scale, settings.scale);
-    Renderer.drawRect(Renderer.color(0, 0, 0, 120), 0, 0, width, height);
-    lines.forEach((l, i) => Renderer.drawStringWithShadow(ChatLib.addColor(l), 3, 3 + i * 10));
-    Renderer.retainTransforms(false);
-    Renderer.finishDraw();
+    const pose = ctx.pose();
+    pose.pushMatrix();
+    pose.translate(settings.x, settings.y);
+    pose.scale(settings.scale, settings.scale);
+    ctx.fill(0, 0, Math.ceil(width), height, 0x78000000);
+    lines.forEach((l, i) => Renderer.drawStringWithShadow(ctx, ChatLib.addColor(l), 3, 3 + i * 10));
+    pose.popMatrix();
 };
 
-register("renderOverlay", () => {
+register("renderOverlay", (ctx) => {
     if (moveGui.isOpen()) {
-        drawOverlay(["&6&lDungeon &7F7", "&7Zeit: &f05:12", "&7Mimic: &aJa", "&7Crypts: &a5/5", "&7Score: &a300 &6S+"]);
+        drawOverlay(ctx, ["&6&lDungeon &7F7", "&7Zeit: &f05:12", "&7Mimic: &aJa", "&7Crypts: &a5/5", "&7Score: &a300 &6S+"]);
+        const hint = "&eZiehen zum Verschieben, Mausrad = Groesse, ESC = Fertig";
         Renderer.drawStringWithShadow(
-            ChatLib.addColor("&eZiehen zum Verschieben, Mausrad = Groesse, ESC = Fertig"),
-            Renderer.screen.getWidth() / 2 - 130, Renderer.screen.getHeight() - 20
+            ctx, ChatLib.addColor(hint),
+            (Renderer.screen.getWidth() - Renderer.getStringWidth(hint)) / 2, Renderer.screen.getHeight() - 20
         );
         return;
     }
     if (!settings.enabled || !run.inDungeon) return;
-    drawOverlay(overlayLines());
+    drawOverlay(ctx, overlayLines());
 });
 
 register("dragged", (dx, dy) => {
