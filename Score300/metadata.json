@@ -1,0 +1,7 @@
+{
+  "name": "Score300",
+  "creator": "MindCook1e",
+  "version": "1.0.0",
+  "entry": "index.js",
+  "description": "Dungeon-Overlay mit Zeit, Mimic und Crypts sowie eine Nachricht bei 300 Score."
+}
